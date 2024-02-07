@@ -1,0 +1,50 @@
+# Addon Provider: Paulemann
+msgid ""
+msgstr ""
+"Project-Id-Version: XBMC-Addons\n"
+"Report-Msgid-Bugs-To: alanwww1@xbmc.org\n"
+"POT-Creation-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
+
+msgctxt "#30000"
+msgid "General"
+msgstr ""
+
+msgctxt "#30001"
+msgid "Local interface for WoL"
+msgstr ""
+
+msgctxt "#30002"
+msgid "WoL host/PVR backend ip address"
+msgstr ""
+
+msgctxt "#30003"
+msgid "WoL host/PVR backend mac address"
+msgstr ""
+
+msgctxt "#30004"
+msgid "WoL host/PVR backend port"
+msgstr ""
+
+msgctxt "#30005"
+msgid "WoL wake time (in seconds)"
+msgstr ""
+
+msgctxt "#30006"
+msgid "WoL repeat interal (in minutes)"
+msgstr ""
+
+msgctxt "#30007"
+msgid "PVR Client Addon ID"
+msgstr ""
+
+msgctxt "#30010"
+msgid "Waking up remote host. Wait ..."
+msgstr ""
