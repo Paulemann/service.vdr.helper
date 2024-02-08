@@ -1,1 +1,13 @@
 # service.vdr.helper
+
+The low energy consumption of the Raspberry Pi makes it a perfect device for 24/7 operation. However, it is annoying that if you run kodi (libreelec) on a Rspberry Pi the always on mode may keep backend systems from powering down. In my case it is the VDR VNSI client addon which prevents the VDR backend system from going into power save mode even at times when nobody's watching Live TV or recodings and the client is supposed to be idle. This is due to timer and EPG updates that the client regularly requests from the VDR backend system,
+
+Since the Raspberry Pi itself doesn't have an energy saving mode, there seems to be no easy way to prevent the client from permanently querying the backend system unless you accept to shutdown the system on no/low activity (to be set via the kodi system settings). You'll either have to unplug/plug the power cable to restart the system or you invest in a power knob that is installed on the GPIO pins and attach it somehow to the case.
+
+Now, there's a workaround. Instead of shutting down when the system enters idle mode, you can configure kodi to activate a screen saver. When connected to a TV which supports CEC you may also want to send the TV into standby upon activating the screen saver in kodi. This option can be configured in kodi's CEC settings.
+
+This addon uses the screen saver activation/deactivation notification in kodi to detect if the client is idle and deactivates the PVR client addon during idle time. Additionally, if a MAC address are specified in the addon settings, a WoL signal can be sent to the PVR backend system/any host upon start and when the screen saver is deactivated. If a repeat interval is configured with a value > 0, it will periodically try to wake up the remote system. To check if the remote host is (already) up it requires its IP address and a port configured in the addon settings.
+
+Alternatively, the MAC address  of the PVR backend system can be configured in the PVR client addon (pvr.vdr.vnsi) to send a WoL signal when the addon is in use.
+
+The addon was developed with the intention to use it with a VDR backend system and VDR VNSI client addon on kodi. However, the addon is not VDR specific. If you configure an addon id other than the default pvr.vdr.vnsi you can use it with any other addon that you prefer to be disabled during system idle time.
