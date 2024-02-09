@@ -3,13 +3,22 @@
     <category label="30000">
         <setting label="30001" type="labelenum" id="interface" values="eth0|wlan0" default="eth0" />
         <setting type="sep"/>
-        <setting label="30002" type="text" id="macaddress" default="" />
-        <setting label="30003" type="text" id="ipaddress" default="127.0.0.1" />
-        <setting label="30004" type="number" id="port" default="34890" />
+        <setting label="30002" type="text" id="ipaddress" default="127.0.0.1" />
+        <setting label="30003" type="number" id="port" default="34890" />
+        <setting label="30004" type="text" id="macaddress" default="" />
         <setting type="sep"/>
-        <setting label="30005" type="number" id="wait" default="30" />
+        <setting label="30005" type="number" id="wait" enable="!eq(-1,)" default="30" />
         <setting label="30006" type="number" id="interval" default="0" />
         <setting type="sep"/>
         <setting label="30007" type="text" id="addonid" default="pvr.vdr.vnsi" />
+    </category>
+    <category label="30010">
+        <setting label="30011" type="bool" id="rpcwol"  default="false" />
+        <setting type="sep"/>
+        <setting label="30012" type="number" id="rpcport" default="8080" />
+        <setting label="30013" type="text" id="rpcuser" default="kodi" />
+        <setting label="30014" type="text" id="rpcpwd" enable="!eq(-1,)" option="hidden" default="" />
+        <setting type="sep"/>
+        <setting label="30015" type="text" id="rpcmethod" default="VideoLibrary.Scan" />
     </category>
 </settings>

@@ -22,33 +22,57 @@ msgid "General"
 msgstr "Allgemein"
 
 msgctxt "#30001"
-msgid "WoL: Preferred local interface"
-msgstr "WoL: Bevorzugte lokale Schnittstelle"
+msgid "Preferred local interface"
+msgstr "Bevorzugte lokale Schnittstelle"
 
 msgctxt "#30002"
-msgid "WoL: Remote host/PVR backend mac address (optional)"
-msgstr "WoL: MAC-Adresse des Hosts/PVR-Backends (optional)"
-
-msgctxt "#30003"
 msgid "Monitored host/PVR backend ip address"
 msgstr "Überwachte Host-/PVR-Backend-IP-Adresse"
 
-msgctxt "#30004"
+msgctxt "#30003"
 msgid "Monitored host/PVR backend port"
 msgstr "Überwachter Host-/PVR-Backend-Port"
+
+msgctxt "#30004"
+msgid "WoL: Remote host/PVR backend mac address (optional)"
+msgstr "WoL: MAC-Adresse des Hosts/PVR-Backends (optional)"
 
 msgctxt "#30005"
 msgid "WoL: Wakeup time in seconds"
 msgstr "WoL: Aufwachzeit in Sekunden"
 
 msgctxt "#30006"
-msgid "WoL: Keepalive interval in minutes (optional)"
-msgstr "WoL: Keepalive-Intervall in Minuten (optional)"
+msgid "Keepalive interval in minutes (optional)"
+msgstr "Keepalive-Intervall in Minuten (optional)"
 
 msgctxt "#30007"
 msgid "PVR Client Addon ID"
 msgstr "PVR Client Addon-ID"
 
 msgctxt "#30010"
+msgid "Kodi Keepalive"
+msgstr "Kodi Keepalive"
+
+msgctxt "#30011"
+msgid "Use RPC call instead of WoL"
+msgstr "RPC-Call anstelle von WoL verwenden"
+
+msgctxt "#30012"
+msgid "RPC port"
+msgstr "RPC-Port"
+
+msgctxt "#30013"
+msgid "RPC user name"
+msgstr "RPC-Benutzername"
+
+msgctxt "#30014"
+msgid "RPC password"
+msgstr "RPC-Passwort"
+
+msgctxt "#30015"
+msgid "RPC method used"
+msgstr "Verwendete RPC-Methode"
+
+msgctxt "#30100"
 msgid "Waking up remote host. Please wait ..."
 msgstr "Wecke entfernten Host. Bitte warten ..."

@@ -6,6 +6,9 @@ import fcntl
 import sys
 import json
 
+import base64
+import requests
+
 import xbmc
 import xbmcaddon
 
@@ -37,7 +40,10 @@ def read_value(item, default):
 
 
 def load_settings():
-    global if_name, host_mac, host_ip, host_port, wait_time, wol_interval, wake_text, pvr_addon_id, pvr_addon_name
+    global host_mac, host_ip, host_port
+    global if_name, wait_time, wol_interval, wake_text
+    global pvr_addon_id, pvr_addon_name
+    global rpc_user, rpc_password, rpc_port, rpc_method, rpc_keepalive
 
     if_name        = read_value('interface', 'eth0')
     host_mac       = read_value('macaddress', '')
@@ -48,7 +54,13 @@ def load_settings():
     pvr_addon_id   = read_value('addonid', 'pvr.vdr.vnsi')
     pvr_addon_name = xbmcaddon.Addon(pvr_addon_id).getAddonInfo('name')
 
-    wake_text      = __localize__(30010)
+    wake_text      = __localize__(30100)
+
+    rpc_keepalive  = read_value('rpcwol', True)
+    rpc_user       = read_value('rpcuser', 'kodi')
+    rpc_password   = read_value('rpcpwd', '')
+    rpc_port       = read_value('rpcport', 8080)
+    rpc_method     = read_value('rpcmethod', 'VideoLibrary.Scan') # as long as InhibitIdleShutdown(true) is not supported
 
 
 def isOpen(ip, port, timeout=3):
@@ -142,7 +154,10 @@ def wake_host(wait=False, unconditionally=False):
             xbmc.log(f"[{__addon_id__}] Exception occured: {str(e)}.", level=xbmc.LOGINFO)
 
 
-def rpc_request(method, params=None):
+def rpc_request(method, params=None, host='localhost', port=8080, username=None, password=None):
+    url = f"http://{host}:{port}/jsonrpc"
+    headers = {'Content-Type': 'application/json'}
+
     xbmc.log(f"[{__addon_id__}] Initializing RPC request with method {method}.", level=xbmc.LOGDEBUG)
 
     jsondata = {
@@ -153,9 +168,25 @@ def rpc_request(method, params=None):
     if params:
         jsondata['params'] = params
 
+    if username and password:
+        auth_str = f'{username}:{password}'
+        try:
+            base64str = base64.encodestring(auth_str)[:-1]
+        except:
+            base64str = base64.b64encode(auth_str.encode()).decode()
+        headers['Authorization'] = f"Basic {base64str}"
+
     try:
-        response = xbmc.executeJSONRPC(json.dumps(jsondata))
-        data = json.loads(response)
+        if host in ['localhost', '127.0.0.1']:
+            response = xbmc.executeJSONRPC(json.dumps(jsondata))
+            data = json.loads(response)
+
+        else:
+            response = requests.post(url, data=json.dumps(jsondata), headers=headers)
+            if not response.ok:
+                raise RuntimeError(f"Response status code: {response.status_code}")
+
+            data = json.loads(response.text)
 
         if data['id'] == method and 'result' in data:
             xbmc.log(f"[{__addon_id__}] RPC request returned data: {data['result']}.", level=xbmc.LOGDEBUG)
@@ -233,5 +264,9 @@ if __name__ == "__main__":
             break
         if wol_interval > 0:
             if not xbmc.getCondVisibility("System.ScreenSaverActive"): #if not system_idle
-                wake_host()
+                if rpc_keepalive:
+                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method} to host {host_ip}.", level=xbmc.LOGINFO)
+                    rpc_request(rpc_method, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
+                else:
+                    wake_host(unconditionally=True)
 
