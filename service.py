@@ -41,9 +41,12 @@ def read_value(item, default):
 
 def load_settings():
     global host_mac, host_ip, host_port
-    global if_name, wait_time, wol_interval, wake_text
+    global wait_time, wol_interval, wake_text
     global pvr_addon_id, pvr_addon_name
     global rpc_user, rpc_password, rpc_port, rpc_method, rpc_keepalive
+    global broadcast_ip
+
+    wake_text      = __localize__(30100)
 
     if_name        = read_value('interface', 'eth0')
     host_mac       = read_value('macaddress', '')
@@ -54,13 +57,24 @@ def load_settings():
     pvr_addon_id   = read_value('addonid', 'pvr.vdr.vnsi')
     pvr_addon_name = xbmcaddon.Addon(pvr_addon_id).getAddonInfo('name')
 
-    wake_text      = __localize__(30100)
-
     rpc_keepalive  = read_value('rpcwol', True)
     rpc_user       = read_value('rpcuser', 'kodi')
     rpc_password   = read_value('rpcpwd', '')
     rpc_port       = read_value('rpcport', 8080)
     rpc_method     = read_value('rpcmethod', 'VideoLibrary.Scan') # as long as InhibitIdleShutdown(true) is not supported
+
+    # Get broadcast ip dynamically
+    try:
+        #local_ip = socket.gethostbyname(socket.gethostname())
+        local_ip = get_ip_address(if_name)
+        xbmc.log(f"[{__addon_id__}] Local IP address of interface {if_name}: {local_ip}.", level=xbmc.LOGINFO)
+        local_ip = local_ip.rsplit('.', 1)
+        local_ip[1] = '255'
+
+        broadcast_ip = '.'.join(local_ip)
+    except:
+        xbmc.log(f"[{__addon_id__}] Fatal error: Couldn't determine broadcast address for interface {if_name} --> Abort.", level=xbmc.LOGINFO)
+        sys.exit(1)
 
 
 def isOpen(ip, port, timeout=3):
@@ -144,7 +158,7 @@ def wake_host(wait=False, unconditionally=False):
             xbmc.log(f"[{__addon_id__}] No MAC addresss specified. Skip sending WoL request.", level=xbmc.LOGINFO)
             return
 
-        xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} on interface {if_name}.", level=xbmc.LOGINFO)
+        xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} of host {host_ip}.", level=xbmc.LOGINFO)
         try:
             wake_on_lan(host_mac)
             xbmc.executebuiltin(f"Notification({__addon_id__}, {wake_text}, {wait_time})")
@@ -215,6 +229,10 @@ def parse_notification(sender, method, data):
 
 
 class MyMonitor(xbmc.Monitor):
+    def onSettingsChanged(self):
+        xbmc.log(f"[{__addon_id__}] Settings changed.", xbmc.LOGDEBUG)
+        load_settings()
+
     #def onScreensaverActivated(self):
     #    xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
 
@@ -231,19 +249,6 @@ if __name__ == "__main__":
 
     load_settings()
     xbmc.log(f"[{__addon_id__}] Settings loaded.", level=xbmc.LOGINFO)
-
-    # Get broadcast ip dynamically
-    try:
-        #local_ip = socket.gethostbyname(socket.gethostname())
-        local_ip = get_ip_address(if_name)
-        xbmc.log(f"[{__addon_id__}] Local IP address of interface {if_name}: {local_ip}.", level=xbmc.LOGINFO)
-        local_ip = local_ip.rsplit('.', 1)
-        local_ip[1] = '255'
-
-        broadcast_ip = '.'.join(local_ip)
-    except:
-        xbmc.log(f"[{__addon_id__}] Couldn't determine broadcast address for interface {if_name}.", level=xbmc.LOGINFO)
-        sys.exit(1)
 
     try:
         screensaver = bool(rpc_request('Settings.GetSettingValue', {'setting': 'screensaver.mode'})['value'])
