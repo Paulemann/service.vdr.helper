@@ -2,7 +2,7 @@
 
 Service addon that temporarily deactivates the VDR VNSI Client addon when the client is idle to allow the VDR backend system to enter power save mode.
 
-The low energy consumption of the Raspberry Pi makes it a perfect device for 24/7 operation. However, it is annoying that if you run kodi (libreelec) on a Rspberry Pi the always on mode may keep backend systems from powering down. In my case it is the VDR VNSI client addon which prevents the VDR backend system from going into power save mode even at times when nobody's watching Live TV or recodings and the client is supposed to be idle. This is due to timer and EPG updates that the client regularly requests from the VDR backend system,
+The low energy consumption of the Raspberry Pi makes it a perfect device for 24/7 operation. However, it is annoying that if you run kodi (libreelec) on a Raspberry Pi the always on mode may keep backend systems from powering down. In my case it is the VDR VNSI client addon which prevents the VDR backend system from going into power save mode even at times when nobody's watching Live TV or recodings and the client is supposed to be idle. This is due to timer and EPG updates that the client regularly requests from the VDR backend system,
 
 Since the Raspberry Pi itself doesn't have an energy saving mode, there seems to be no easy way to prevent the client from permanently querying the backend system unless you accept to shutdown the system on no/low activity (to be set via the kodi system settings). You'll either have to unplug/plug the power cable to restart the system or you invest in a power knob that is installed on the GPIO pins and attach it somehow to the case.
 
@@ -12,4 +12,4 @@ This addon uses the screen saver activation/deactivation notification in kodi to
 
 Alternatively, the MAC address  of the PVR backend system can be configured in the PVR client addon (pvr.vdr.vnsi) to send a WoL signal when the addon is in use.
 
-The addon was developed with the intention to use it with a VDR backend system and VDR VNSI client addon on kodi. However, the addon is not VDR specific. If you configure an addon id other than the default pvr.vdr.vnsi you can use it with any other addon that you prefer to be disabled during system idle time.
+The addon was developed with the intention to use it with a VDR backend system and VDR VNSI Client addon on kodi. However, the addon is not VDR specific. If you configure an addon id other than the default pvr.vdr.vnsi you can use it with any other addon that you prefer to be disabled during system idle time.
