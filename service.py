@@ -18,6 +18,9 @@ __localize__   = __addon__.getLocalizedString
 __profile__    = __addon__.getAddonInfo('profile')
 
 
+#system_idle = False
+
+
 def read_value(item, default):
     try:
         value = int(__setting__(item))
@@ -49,6 +52,9 @@ def load_settings():
 
 
 def isOpen(ip, port, timeout=3):
+    if ip == '127.0.0.1':
+       return False
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(timeout)
 
@@ -83,7 +89,6 @@ def get_ip_address(ifname='eth0'):
 
 
 def wake_on_lan(mac_address):
-    #pattern = '^([A-F0-9]{2}(([:][A-F0-9]{2}){5}|([-][A-F0-9]{2}){5})|([s][A-F0-9]{2}){5})|([a-f0-9]{2}(([:][a-f0-9]{2}){5}|([-][a-f0-9]{2}){5}|([s][a-f0-9]{2}){5}))$'
     pattern = '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})|([0-9A-Fa-f]{12})$'
 
     # Check mac address format
@@ -91,8 +96,10 @@ def wake_on_lan(mac_address):
 
     if not found:
         raise ValueError('Incorrect MAC address format')
+    else:
+        xbmc.log(f"[{__addon_id__}] MAC address format is valid.", level=xbmc.LOGDEBUG)
 
-    # If the match is found, remove mac separator [:-\s]
+    # If the match is found, remove mac separator
     if len(mac_address) == 17:
         mac_address = mac_address.replace(mac_address[2], '')
     elif len(mac_address) == 14:
@@ -112,19 +119,20 @@ def wake_on_lan(mac_address):
     # Broadcast it to the LAN.
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    xbmc.log(f"[{__addon_id__}] Sending WoL packet {send_data} to broadcast address {broadcast_ip}", level=xbmc.LOGDEBUG)
+    xbmc.log(f"[{__addon_id__}] Sending WoL packet {send_data} to broadcast address {broadcast_ip}.", level=xbmc.LOGDEBUG)
     #sock.sendto(send_data, ('255.255.255.255', 9))
     sock.sendto(send_data, (broadcast_ip, 7))
 
 
-def wake_host(wait=False):
-    if not host_mac or host_ip == '127.0.0.1':
-       return
-
-    if isOpen(host_ip, host_port, 1):
+def wake_host(wait=False, unconditionally=False):
+    if not unconditionally and isOpen(host_ip, host_port, 1):
         xbmc.log(f"[{__addon_id__}] Host {host_ip} is up. Skip sending WoL request.", level=xbmc.LOGINFO)
     else:
-        xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} of host {host_ip} on interface {if_name}.", level=xbmc.LOGINFO)
+        if not host_mac:
+            xbmc.log(f"[{__addon_id__}] No MAC addresss specified. Skip sending WoL request.", level=xbmc.LOGINFO)
+            return
+
+        xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} on interface {if_name}.", level=xbmc.LOGINFO)
         try:
             wake_on_lan(host_mac)
             xbmc.executebuiltin(f"Notification({__addon_id__}, {wake_text}, {wait_time})")
@@ -159,6 +167,7 @@ def rpc_request(method, params=None):
 
 def parse_notification(sender, method, data):
     if sender == 'xbmc' and  method == 'GUI.OnScreensaverActivated':
+        #system_idle = True
         xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
         rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': False})
         xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon temporarily disabled.", level=xbmc.LOGINFO)
@@ -167,6 +176,7 @@ def parse_notification(sender, method, data):
         signal = json.loads(data)
         if signal and 'shuttingdown' in signal:
             if not signal['shuttingdown']:
+                #system_idle = False
                 xbmc.log(f"[{__addon_id__}] Screen saver deactivated.", level=xbmc.LOGINFO)
                 wake_host()
                 rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': True})
@@ -175,13 +185,13 @@ def parse_notification(sender, method, data):
 
 class MyMonitor(xbmc.Monitor):
     #def onScreensaverActivated(self):
-    #    xbmc.log(f"[{__addon_id__}] Screen saver activated", level=xbmc.LOGINFO)
+    #    xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
 
     #def onScreensaverDeactivated(self):
-    #    xbmc.log(f"[{__addon_id__}] Screen saver deactivated", level=xbmc.LOGINFO)
+    #    xbmc.log(f"[{__addon_id__}] Screen saver deactivated.", level=xbmc.LOGINFO)
 
     def onNotification(self, sender, method, data):
-        xbmc.log(f"[{__addon_id__}] OnNotification triggered (sender: {sender}, method: {method}, data: {data})", level=xbmc.LOGDEBUG)
+        xbmc.log(f"[{__addon_id__}] OnNotification triggered (sender: {sender}, method: {method}, data: {data}).", level=xbmc.LOGDEBUG)
         parse_notification(sender, method, data)
 
 
@@ -204,6 +214,15 @@ if __name__ == "__main__":
         xbmc.log(f"[{__addon_id__}] Couldn't determine broadcast address for interface {if_name}.", level=xbmc.LOGINFO)
         sys.exit(1)
 
+    try:
+        screensaver = bool(rpc_request('Settings.GetSettingValue', {'setting': 'screensaver.mode'})['value'])
+        xbmc.log(f"[{__addon_id__}] Sreensaver is {'enabled' if screensaver else 'disabled --> enabling ...'}.", level=xbmc.LOGINFO)
+        if not screensaver:
+            rpc_request('Settings.SetSettingValue', params={'setting': 'screensaver.mode', 'value': 'screensaver.xbmc.builtin.dim'})
+            xbmc.log(f"[{__addon_id__}] Screensaver enabled with default value (Dim).", level=xbmc.LOGINFO)
+    except:
+        xbmc.log(f"[{__addon_id__}] Unable to determine/adapt current screensaver mode.", level=xbmc.LOGINFO)
+
     wake_host()
 
     monitor = MyMonitor()
@@ -213,5 +232,6 @@ if __name__ == "__main__":
             xbmc.log(f"[{__addon_id__}] Abort requested.", level=xbmc.LOGINFO)
             break
         if wol_interval > 0:
-            wake_host()
+            if not xbmc.getCondVisibility("System.ScreenSaverActive"): #if not system_idle
+                wake_host()
 

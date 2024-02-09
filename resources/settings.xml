@@ -3,8 +3,8 @@
     <category label="30000">
         <setting label="30001" type="labelenum" id="interface" values="eth0|wlan0" default="eth0" />
         <setting type="sep"/>
-        <setting label="30002" type="text" id="ipaddress" default="127.0.0.1" />
-        <setting label="30003" type="text" id="macaddress" default="" />
+        <setting label="30002" type="text" id="macaddress" default="" />
+        <setting label="30003" type="text" id="ipaddress" default="127.0.0.1" />
         <setting label="30004" type="number" id="port" default="34890" />
         <setting type="sep"/>
         <setting label="30005" type="number" id="wait" default="30" />

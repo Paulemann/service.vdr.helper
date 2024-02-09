@@ -18,27 +18,27 @@ msgid "General"
 msgstr ""
 
 msgctxt "#30001"
-msgid "Local interface for WoL"
+msgid "WoL: Preferred local interface"
 msgstr ""
 
 msgctxt "#30002"
-msgid "WoL host/PVR backend ip address"
+msgid "WoL: Remote host/PVR backend mac address (optional)"
 msgstr ""
 
 msgctxt "#30003"
-msgid "WoL host/PVR backend mac address"
+msgid "Monitored host/PVR backend ip address"
 msgstr ""
 
 msgctxt "#30004"
-msgid "WoL host/PVR backend port"
+msgid "Monitored host/PVR backend port"
 msgstr ""
 
 msgctxt "#30005"
-msgid "WoL wake time (in seconds)"
+msgid "WoL: Wakeup time in seconds"
 msgstr ""
 
 msgctxt "#30006"
-msgid "WoL repeat interal (in minutes)"
+msgid "WoL: Keepalive interval in minutes (optional)"
 msgstr ""
 
 msgctxt "#30007"
@@ -46,5 +46,5 @@ msgid "PVR Client Addon ID"
 msgstr ""
 
 msgctxt "#30010"
-msgid "Waking up remote host. Wait ..."
+msgid "Waking up remote host. Please wait ..."
 msgstr ""
