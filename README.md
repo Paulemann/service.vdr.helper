@@ -1,5 +1,7 @@
 # service.vdr.helper
 
+Service addon that temporarily deactivates the VDR VNSI Client addon when the client is idle to allow the VDR backend system to enter power save mode.
+
 The low energy consumption of the Raspberry Pi makes it a perfect device for 24/7 operation. However, it is annoying that if you run kodi (libreelec) on a Rspberry Pi the always on mode may keep backend systems from powering down. In my case it is the VDR VNSI client addon which prevents the VDR backend system from going into power save mode even at times when nobody's watching Live TV or recodings and the client is supposed to be idle. This is due to timer and EPG updates that the client regularly requests from the VDR backend system,
 
 Since the Raspberry Pi itself doesn't have an energy saving mode, there seems to be no easy way to prevent the client from permanently querying the backend system unless you accept to shutdown the system on no/low activity (to be set via the kodi system settings). You'll either have to unplug/plug the power cable to restart the system or you invest in a power knob that is installed on the GPIO pins and attach it somehow to the case.
