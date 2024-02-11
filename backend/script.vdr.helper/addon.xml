@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.vdr.helper" name="VDR Helper Script" version="1.0.0" provider-name="Paulemann">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+     </requires>
+    <extension point="xbmc.python.script" library="default.py">
+        <provides>executable</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <summary lang="en">VDR Helper Script to reset the kodi shutdown timer.</summary>
+        <summary lang="de">VDR Helper Script zum Zurücksetzen des Kodi Shutdown Timers.</summary>
+        <description lang="en">This script is called via kodi JSON-RPC API to prevent kodi's power saving settings from shutting down the backenend system while VDR is still streaming data to remote clients. Make sure that kodi remote control via http is enabled under services and configured with port and credentials matching the settings (e.g. of the VDH Helper Service addon) on the remote client.</description>
+        <description lang="de">Diees Skript wird per JSON-RPC API aufgerufen, um einen Shutdown des Backend-Systems aufgrund von Kodis Energiesparen-Einstellungen zu verhindern, während VDR noch Daten an andere Geräte streamt. Dazu muss die Steureung von Kodi über http unter den Dienste-Einstellungen aktiviert sein und Port, sowie User und Passwort den Einstellungen (z.B. des VDR Helper Service Addons) auf dem Client entsprechen.</description>
+        <disclaimer lang="en">Use at your own risk</disclaimer>
+        <disclaimer lang="de">Benutzung auf eigene Gefahr</disclaimer>
+        <assets>
+            <icon>icon.png</icon>
+        </assets>
+    </extension>
+</addon>
