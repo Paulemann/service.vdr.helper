@@ -7,7 +7,7 @@
         <setting label="30003" type="number" id="port" default="34890" />
         <setting label="30004" type="text" id="macaddress" default="" />
         <setting type="sep"/>
-        <setting label="30005" type="number" id="wait" enable="!eq(-1,)" default="30" />
+        <setting label="30005" type="number" id="wait" enable="!eq(-2,)" default="30" />
         <setting label="30006" type="number" id="interval" default="0" />
         <setting type="sep"/>
         <setting label="30007" type="text" id="addonid" default="pvr.vdr.vnsi" />
@@ -19,6 +19,7 @@
         <setting label="30013" type="text" id="rpcuser" default="kodi" />
         <setting label="30014" type="text" id="rpcpwd" enable="!eq(-1,)" option="hidden" default="" />
         <setting type="sep"/>
-        <setting label="30015" type="text" id="rpcmethod" default="VideoLibrary.Scan" />
+        <setting label="30015" type="labelenum" id="rpcmethod" values="VideoLibrary.Scan|Addons.ExecuteAddon" default="VideoLibrary.Scan" />
+        <setting label="30016" type="text" id="rpcaddonid" enable="false" default="script.vdr.helper" />
     </category>
 </settings>

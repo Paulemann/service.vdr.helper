@@ -43,7 +43,7 @@ def load_settings():
     global host_mac, host_ip, host_port
     global wait_time, wol_interval, wake_text
     global pvr_addon_id, pvr_addon_name
-    global rpc_user, rpc_password, rpc_port, rpc_method, rpc_keepalive
+    global rpc_user, rpc_password, rpc_port, rpc_method, rpc_params, rpc_keepalive
     global broadcast_ip
 
     wake_text      = __localize__(30100)
@@ -61,7 +61,13 @@ def load_settings():
     rpc_user       = read_value('rpcuser', 'kodi')
     rpc_password   = read_value('rpcpwd', '')
     rpc_port       = read_value('rpcport', 8080)
-    rpc_method     = read_value('rpcmethod', 'VideoLibrary.Scan') # as long as InhibitIdleShutdown(true) is not supported
+    # as long as InhibitIdleShutdown(true) is not supported
+    rpc_method     = read_value('rpcmethod', 'VideoLibrary.Scan')
+    rpc_addon_id   = read_value('rpcaddonid', 'script.vdr.helper')
+    if rpc_method == 'VideoLibrary.Scan':
+        rpc_params = None
+    elif rpc_method == 'Addons.ExecuteAddon':
+        rpc_params = {'addonid': rpc_addon_id}
 
     # Get broadcast ip dynamically
     try:
@@ -72,8 +78,8 @@ def load_settings():
         local_ip[1] = '255'
 
         broadcast_ip = '.'.join(local_ip)
-    except:
-        xbmc.log(f"[{__addon_id__}] Fatal error: Couldn't determine broadcast address for interface {if_name} --> Abort.", level=xbmc.LOGINFO)
+    except Exception as e:
+        xbmc.log(f"[{__addon_id__}] Fatal error: {str(e)} --> Abort.", level=xbmc.LOGINFO)
         sys.exit(1)
 
 
@@ -96,13 +102,39 @@ def isOpen(ip, port, timeout=3):
         s.close()
 
 
+def isUp(ifname):
+    SIOCGIFFLAGS = 0x8913
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        flags, = struct.unpack('H', fcntl.ioctl(
+            s.fileno(),
+            SIOCGIFFLAGS,
+            struct.pack('256s', bytes(ifname[:15], 'utf-8'))
+            )[16:18])
+        up = flags & 1
+        return bool(up)
+
+    except:
+        raise RuntimeError(f"Couldn't determine status of interface {ifname}")
+
+    finally:
+        s.close()
+
+
 def get_ip_address(ifname='eth0'):
+    if not isUp(ifname):
+        raise RuntimeError(f"Interface {ifname} is down")
+
+    SIOCGIFADDR = 0x8915
+
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     try:
         ip = socket.inet_ntoa(fcntl.ioctl(
             s.fileno(),
-            0x8915,  # SIOCGIFADDR
+            SIOCGIFADDR,
             struct.pack('256s', bytes(ifname[:15], 'utf-8'))
             )[20:24])
         return ip
@@ -269,9 +301,9 @@ if __name__ == "__main__":
             break
         if wol_interval > 0:
             if not xbmc.getCondVisibility("System.ScreenSaverActive"): #if not system_idle
-                if rpc_keepalive:
-                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method} to host {host_ip}.", level=xbmc.LOGINFO)
-                    rpc_request(rpc_method, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
+                if rpc_keepalive and isOpen(host_ip, rpc_port, 1):
+                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method}, parameters {rpc_params} to host {host_ip}.", level=xbmc.LOGINFO)
+                    rpc_request(rpc_method, params=rpc_params, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
                 else:
                     wake_host(unconditionally=True)
 

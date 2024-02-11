@@ -73,6 +73,10 @@ msgctxt "#30015"
 msgid "RPC method used"
 msgstr "Verwendete RPC-Methode"
 
+msgctxt "#30016"
+msgid "Addon ID"
+msgstr "Addon-ID"
+
 msgctxt "#30100"
 msgid "Waking up remote host. Please wait ..."
 msgstr "Wecke entfernten Host. Bitte warten ..."
