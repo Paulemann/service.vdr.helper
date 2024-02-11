@@ -17,3 +17,48 @@ If kodi runs on the same backend system as VDR, there's another annoying "featur
 To mitigate this I added an alternative method leveraging kodi's remote control capabilites. Instead of repetetively sending WoL "magic packets" to the backend system, it sends Remote Procedure Call (RPC) requests to kodi running on the backend system. Kodi has a built-in command "InhibitIdleShutdown" to reset kodi's internal idle timer. Unfortunately, this command is not available in the current JSON-RPC API implementation (as af v13 (kodi Omega)). Hence, the next best option is to send an RPC request with a method like "VideoLibrary.Scan" (preset setting; starts an update of kodi's video library) that will implicitly reset kodi's idle timer. Just make sure, that the keepalive interval in the addon settings is set to a value smaller than the shutdown function timer in kodi's power saving settings on the backend system.
 
 The addon was developed with the intention to use it with a VDR backend system and VDR VNSI Client addon on kodi. However, the addon is not VDR specific. If you configure an addon id other than the default pvr.vdr.vnsi you can use it with any other addon that you prefer to be disabled during system idle time.
+
+Update:
+
+You can install a script addon on the backend system. The script will reset kodi's shutdown timer. From the remote client you can use JSON-RPC method "Addons.ExecuteAddon" with Parameter {"addonid": "script.vdr.helper"} to call this script periodically instead of startting the video library scan. This has been added as an option in the settings of the service.vdr.helper addon.
+
+# script.vdr.helper
+
+addon.xml:
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<addon id="script.vdr.helper" name="VDR Helper Script" version="1.0.0" provider-name="Paulemann">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+     </requires>
+    <extension point="xbmc.python.script" library="default.py">
+        <provides>executable</provides>
+    </extension>
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <summary lang="en">VDR Helper Script to reset the kodi shutdown timer.</summary>
+        <summary lang="de">VDR Helper Script zum Zurücksetzen des Kodi Shutdown Timers.</summary>
+        <description lang="en">This script is called via kodi JSON-RPC API to prevent kodi's power saving settings from shutting down the backenend system while VDR is still streaming data to remote clients. Make sure that kodi remote control via http is enabled under services and configured with port and credentials matching the settings (e.g. of the VDH Helper Service addon) on the remote client.</description>
+        <description lang="de">Diees Skript wird per JSON-RPC API aufgerufen, um einen Shutdown des Backend-Systems aufgrund von Kodis Energiesparen-Einstellungen zu verhindern, während VDR noch Daten an andere Geräte streamt. Dazu muss die Steureung von Kodi über http unter den Dienste-Einstellungen aktiviert sein und Port, sowie User und Passwort den Einstellungen (z.B. des VDR Helper Service Addons) auf dem Client entsprechen.</description>
+        <disclaimer lang="en">Use at your own risk</disclaimer>
+        <disclaimer lang="de">Benutzung auf eigene Gefahr</disclaimer>
+        <assets>
+            <icon>icon.png</icon>
+        </assets>
+    </extension>
+</addon>
+
+
+default.py:
+
+import xbmc
+import xbmcaddon
+
+__addon__      = xbmcaddon.Addon()
+__addon_id__   = __addon__.getAddonInfo('id')
+
+if __name__ == "__main__":
+    xbmc.log(f"[{__addon_id__}] Reset kodi shutdwon timer.", level=xbmc.LOGINFO)
+
+    xbmc.executebuiltin('InhibitIdleShutdown(true)')
+    
