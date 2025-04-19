@@ -5,6 +5,7 @@ import struct
 import fcntl
 import sys
 import json
+import time
 
 import base64
 import requests
@@ -87,29 +88,31 @@ def isOpen(ip, port, timeout=3):
     if ip == '127.0.0.1':
        return False
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(timeout)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
 
     try:
-        s.connect((ip, int(port)))
-        s.shutdown(socket.SHUT_RDWR)
+        sock.connect((ip, int(port)))
+        # or
+        #if sock.connect_ex((ip, int(port))) == 0: # True if open, False if not
+        sock.shutdown(socket.SHUT_RDWR)
         return True
 
     except:
         return False
 
     finally:
-        s.close()
+        sock.close()
 
 
 def isUp(ifname):
     SIOCGIFFLAGS = 0x8913
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     try:
         flags, = struct.unpack('H', fcntl.ioctl(
-            s.fileno(),
+            sock.fileno(),
             SIOCGIFFLAGS,
             struct.pack('256s', bytes(ifname[:15], 'utf-8'))
             )[16:18])
@@ -120,7 +123,7 @@ def isUp(ifname):
         raise RuntimeError(f"Couldn't determine status of interface {ifname}")
 
     finally:
-        s.close()
+        sock.close()
 
 
 def get_ip_address(ifname='eth0'):
@@ -129,11 +132,11 @@ def get_ip_address(ifname='eth0'):
 
     SIOCGIFADDR = 0x8915
 
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     try:
         ip = socket.inet_ntoa(fcntl.ioctl(
-            s.fileno(),
+            sock.fileno(),
             SIOCGIFADDR,
             struct.pack('256s', bytes(ifname[:15], 'utf-8'))
             )[20:24])
@@ -143,7 +146,14 @@ def get_ip_address(ifname='eth0'):
         raise RuntimeError(f"Couldn't determine ip address of interface {ifname}")
 
     finally:
-        s.close()
+        sock.close()
+
+
+def isPlaybackPaused():
+    # Player().isPlaying will return True if Player is in Playback or Pause Mode.
+    # However, when ScreenSaver is activated it is safe to assume Player is paused.
+    #return xbmc.Player().isPlaying
+    return bool(xbmc.getCondVisibility("Player.Paused"))
 
 
 def wake_on_lan(mac_address):
@@ -185,19 +195,34 @@ def wake_on_lan(mac_address):
 def wake_host(wait=False, unconditionally=False):
     if not unconditionally and isOpen(host_ip, host_port, 1):
         xbmc.log(f"[{__addon_id__}] Host {host_ip} is up. Skip sending WoL request.", level=xbmc.LOGINFO)
+        return True
     else:
         if not host_mac:
             xbmc.log(f"[{__addon_id__}] No MAC addresss specified. Skip sending WoL request.", level=xbmc.LOGINFO)
-            return
+            return False
 
         xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} of host {host_ip}.", level=xbmc.LOGINFO)
+
         try:
             wake_on_lan(host_mac)
             xbmc.executebuiltin(f"Notification({__addon_id__}, {wake_text}, {wait_time})")
             if wait:
-                xbmc.sleep(wait_time)
+                #xbmc.sleep(wait_time)
+
+                start_time = time.time()
+                while time.time() - start_time < wait_time:
+                    is_up = isOpen(host_ip, host_port, 1)
+                    if is_up:
+                        break
+                    else:
+                        time.sleep(5)
+
+                return is_up
+
         except Exception as e:
             xbmc.log(f"[{__addon_id__}] Exception occured: {str(e)}.", level=xbmc.LOGINFO)
+
+        return isOpen(host_ip, host_port, 1)
 
 
 def rpc_request(method, params=None, host='localhost', port=8080, username=None, password=None):
@@ -228,7 +253,7 @@ def rpc_request(method, params=None, host='localhost', port=8080, username=None,
             data = json.loads(response)
 
         else:
-            response = requests.post(url, data=json.dumps(jsondata), headers=headers)
+            response = requests.post(url, data=json.dumps(jsondata), headers=headers, timeout=5)
             if not response.ok:
                 raise RuntimeError(f"Response status code: {response.status_code}")
 
@@ -241,13 +266,28 @@ def rpc_request(method, params=None, host='localhost', port=8080, username=None,
     except Exception as e:
         xbmc.log(f"[{__addon_id__}] RPC request failed with error: {str(e)}.", level=xbmc.LOGINFO)
 
+    return None
+
 
 def parse_notification(sender, method, data):
-    if sender == 'xbmc' and  method == 'GUI.OnScreensaverActivated':
+    if sender == 'xbmc' and method == 'GUI.OnScreensaverActivated':
         #system_idle = True
         xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
-        rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': False})
-        xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon temporarily disabled.", level=xbmc.LOGINFO)
+        if isPlaybackPaused():
+            xbmc.log(f"[{__addon_id__}] Playback paused. {pvr_addon_name} addon not disabled.", level=xbmc.LOGINFO)
+        else:
+            response = rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': False})
+            #xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon temporarily disabled. Response: {response}", level=xbmc.LOGINFO)
+
+            xbmc.sleep(15000)
+            response = rpc_request('Addons.GetAddonDetails', params={'addonid': pvr_addon_id, 'properties': ['enabled']})
+            if response and 'addon' in response:
+                xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled: {response['addon']['enabled']}", level=xbmc.LOGINFO)
+
+                # Switch to home
+                response = rpc_request('GUI.ActivateWindow', params={'window': 'home'})
+            else:
+                xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon diablement failed", level=xbmc.LOGINFO)
 
     if sender == 'xbmc' and  method == 'GUI.OnScreensaverDeactivated':
         signal = json.loads(data)
@@ -255,9 +295,24 @@ def parse_notification(sender, method, data):
             if not signal['shuttingdown']:
                 #system_idle = False
                 xbmc.log(f"[{__addon_id__}] Screen saver deactivated.", level=xbmc.LOGINFO)
-                wake_host()
-                rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': True})
-                xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled.", level=xbmc.LOGINFO)
+
+                if not wake_host(wait=True):
+                    xbmc.log(f"[{__addon_id__}] Failes to wake up host with ip address {host_ip}", level=xbmc.LOGINFO)
+                    return
+
+                response = rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': True})
+                #xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled. Response: {response}", level=xbmc.LOGINFO)
+
+                xbmc.sleep(15000)
+                response = rpc_request('Addons.GetAddonDetails', params={'addonid': pvr_addon_id, 'properties': ['enabled']})
+                if response and 'addon' in response:
+                    xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled: {response['addon']['enabled']}", level=xbmc.LOGINFO)
+
+                    # Switch to home
+                    xbmc.sleep(5000)
+                    response = rpc_request('GUI.ActivateWindow', params={'window': 'home'})
+                else:
+                    xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enablement failed", level=xbmc.LOGINFO)
 
 
 class MyMonitor(xbmc.Monitor):
@@ -286,8 +341,8 @@ if __name__ == "__main__":
         screensaver = bool(rpc_request('Settings.GetSettingValue', {'setting': 'screensaver.mode'})['value'])
         xbmc.log(f"[{__addon_id__}] Sreensaver is {'enabled' if screensaver else 'disabled --> enabling ...'}.", level=xbmc.LOGINFO)
         if not screensaver:
-            rpc_request('Settings.SetSettingValue', params={'setting': 'screensaver.mode', 'value': 'screensaver.xbmc.builtin.dim'})
-            xbmc.log(f"[{__addon_id__}] Screensaver enabled with default value (Dim).", level=xbmc.LOGINFO)
+            response = rpc_request('Settings.SetSettingValue', params={'setting': 'screensaver.mode', 'value': 'screensaver.xbmc.builtin.dim'})
+            xbmc.log(f"[{__addon_id__}] Screensaver enabled with default value (Dim). Response: {response}", level=xbmc.LOGINFO)
     except:
         xbmc.log(f"[{__addon_id__}] Unable to determine/adapt current screensaver mode.", level=xbmc.LOGINFO)
 
@@ -302,8 +357,9 @@ if __name__ == "__main__":
         if wol_interval > 0:
             if not xbmc.getCondVisibility("System.ScreenSaverActive"): #if not system_idle
                 if rpc_keepalive and isOpen(host_ip, rpc_port, 1):
-                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method}, parameters {rpc_params} to host {host_ip}.", level=xbmc.LOGINFO)
-                    rpc_request(rpc_method, params=rpc_params, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
-                else:
-                    wake_host(unconditionally=True)
+                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method}, parameters {rpc_params} to host {host_ip}.", level=xbmc.LOGDEBUG)
+                    response = rpc_request(rpc_method, params=rpc_params, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
+                    xbmc.log(f"[{__addon_id__}] RPC request response: {response}.", level=xbmc.LOGDEBUG)
+                #else:
+                #    wake_host(unconditionally=True)
 
