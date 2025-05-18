@@ -18,44 +18,28 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
 msgctxt "#30000"
-msgid "General"
-msgstr "Allgemein"
+msgid "Wake on LAN"
+msgstr "Wake on LAN"
 
 msgctxt "#30001"
 msgid "Preferred local interface"
 msgstr "Bevorzugte lokale Schnittstelle"
 
-msgctxt "#30002"
-msgid "Monitored host/PVR backend ip address"
-msgstr "Überwachte Host-/PVR-Backend-IP-Adresse"
-
-msgctxt "#30003"
-msgid "Monitored host/PVR backend port"
-msgstr "Überwachter Host-/PVR-Backend-Port"
-
 msgctxt "#30004"
-msgid "WoL: Remote host/PVR backend mac address (optional)"
-msgstr "WoL: MAC-Adresse des Hosts/PVR-Backends (optional)"
+msgid "Remote host mac address (optional)"
+msgstr "MAC-Adresse des Hosts (optional)"
 
 msgctxt "#30005"
-msgid "WoL: Wakeup time in seconds"
-msgstr "WoL: Aufwachzeit in Sekunden"
-
-msgctxt "#30006"
-msgid "Keepalive interval in minutes (optional)"
-msgstr "Keepalive-Intervall in Minuten (optional)"
-
-msgctxt "#30007"
-msgid "PVR Client Addon ID"
-msgstr "PVR Client Addon-ID"
+msgid "Wakeup time in seconds"
+msgstr "Aufwachzeit in Sekunden"
 
 msgctxt "#30010"
 msgid "Kodi Keepalive"
 msgstr "Kodi Keepalive"
 
 msgctxt "#30011"
-msgid "Use RPC call instead of WoL"
-msgstr "RPC-Call anstelle von WoL verwenden"
+msgid "Use RPC call to keep Kodi active"
+msgstr "RPC-Call verwenden, um Kodi aktiv zu halten"
 
 msgctxt "#30012"
 msgid "RPC port"
@@ -76,6 +60,10 @@ msgstr "Verwendete RPC-Methode"
 msgctxt "#30016"
 msgid "Addon ID"
 msgstr "Addon-ID"
+
+msgctxt "#30017"
+msgid "Keepalive interval in minutes (optional)"
+msgstr "Keepalive-Intervall in Minuten (optional)"
 
 msgctxt "#30100"
 msgid "Waking up remote host. Please wait ..."

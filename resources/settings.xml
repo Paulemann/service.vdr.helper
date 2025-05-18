@@ -2,24 +2,19 @@
 <settings>
     <category label="30000">
         <setting label="30001" type="labelenum" id="interface" values="eth0|wlan0" default="eth0" />
-        <setting type="sep"/>
-        <setting label="30002" type="text" id="ipaddress" default="127.0.0.1" />
-        <setting label="30003" type="number" id="port" default="34890" />
         <setting label="30004" type="text" id="macaddress" default="" />
-        <setting type="sep"/>
-        <setting label="30005" type="number" id="wait" enable="!eq(-2,)" default="30" />
-        <setting label="30006" type="number" id="interval" default="0" />
-        <setting type="sep"/>
-        <setting label="30007" type="text" id="addonid" default="pvr.vdr.vnsi" />
+        <setting label="30005" type="number" id="wait" default="30" />
     </category>
     <category label="30010">
         <setting label="30011" type="bool" id="rpcwol"  default="false" />
         <setting type="sep"/>
-        <setting label="30012" type="number" id="rpcport" default="8080" />
-        <setting label="30013" type="text" id="rpcuser" default="kodi" />
-        <setting label="30014" type="text" id="rpcpwd" enable="!eq(-1,)" option="hidden" default="" />
+        <setting label="30012" type="number" id="rpcport" enable="eq(-2,true)" default="8080" />
+        <setting label="30013" type="text" id="rpcuser" enable="eq(-3,true)" default="kodi" />
+        <setting label="30014" type="text" id="rpcpwd" enable="eq(-4,true) + !eq(-1,)" option="hidden" default="" />
         <setting type="sep"/>
-        <setting label="30015" type="labelenum" id="rpcmethod" values="VideoLibrary.Scan|Addons.ExecuteAddon" default="VideoLibrary.Scan" />
-        <setting label="30016" type="text" id="rpcaddonid" enable="false" default="script.vdr.helper" />
+        <setting label="30015" type="labelenum" id="rpcmethod" enable="eq(-6,true)" values="VideoLibrary.Scan|Addons.ExecuteAddon" default="VideoLibrary.Scan" />
+        <setting label="30016" type="text" id="rpcaddonid" enable="eq(-7,true) + eq(-1,Addons.ExecuteAddon)" default="script.vdr.helper" />
+        <setting type="sep"/>
+        <setting label="30017" type="number" id="interval" enable="eq(-9,true)" default="0" />
     </category>
 </settings>

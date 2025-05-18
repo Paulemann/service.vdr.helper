@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="service.vdr.helper"
        name="VDR Helper Service"
-       version="1.0.5"
+       version="2.0.1"
        provider-name="Paulemann">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -12,8 +12,8 @@
     <platform>all</platform>
     <summary lang="en">VDR Helper Addon</summary>
     <summary lang="de">VDR Helper Addon</summary>
-    <description lang="en">Since the Raspberry Pi doesn't have an energy saving mode, the PVR client will keep the PVR backend system active by requests sent even when the client is idle. This addon uses the screen saver activation/deactivation notification to detect if the client is idle and deactivates the PVR client addon during idle time. Additionally, a WoL signal can be sent to the PVR backend system/any host upon start and when the screen saver is deactivated (once or in adjustable intervals). Alternatively, the MAC address  of the PVR backend system can be configured in the PVR client addon (pvr.vdr.vnsi) to send a WoL signal when the addon is in use.</description>
-    <description lang="de">Da der Raspberry Pi über keinen Energiesparmodus verfügt, wird durch den PVR-Client das PVR-Backend, selbst im Leerlauf, durch Anfragen aktiv gehalten bzw. regelmässig geweckt. Das Addon nutzt die Benachrichtigung über das Aktivieren/Deaktivieren des Bildschirmschoners zur Erkennung, ob sich der Client im Leerlauf befindet und deaktiviert während der Leerlaufzeit das PVR-Client-Addon. Zusätzlich kann beim Start und nach Deaktivieren des Bildschirmschoners einmalig oder in einstellbaren Intervallen ein WoL-Signal an das PVR-Backend/einen beliebigen Host gesendet werden. Alternativ dazu kann die MAC-Adresse des PVR-Backends im PVR-Client-Addon (pvr.vdr.vnsi) eingetragen werden, um bei Nutzung des PVR-Clients ein WoL-Signal zu senden.</description>
+    <description lang="en">Since the Raspberry Pi has no power-saving mode, the PVR client maintains the connection to the PVR backend system even during inactivity. This add-on detects periods of inactivity based on the screen saver activation/deactivation notification and disables the PVR client add-on during that time. Optionally, it can wake up the PVR backend host at startup and when the screen saver is disabled. When KODI runs on the same backend system, it has its own power-saving settings that can shut down the system even if the PVR backend is still serving other clients. To prevent this, the add-on can optionally use KODI's JSON-RPC API to perform tasks on the KODI backend instance, keeping it active.</description>
+    <description lang="de">Da der Raspberry Pi keinen Energiesparmodus besitzt, hält der PVR-Client die Verbindung zum PVR-Backend-System auch bei Inaktivität aufrecht. Dieses Add-on erkennt Inaktivitätszeiten anhand der Aktivierungs-/Deaktivierungsbenachrichtigung des Bildschirmschoners und deaktiviert das PVR-Client-Add-on während dieser Zeit. Optional kann es den PVR-Backend-Host beim Start und bei Deaktivierung des Bildschirmschoners aufwecken. Wenn KODi auf demselben Backend-System läuft, verfügt es über eigene Energiespareinstellungen, die das System herunterfahren können, selbst wenn das PVR-Backend noch andere Clients bedient. Um dies zu verhindern, kann das Add-on optional die JSON-RPC-API von KODI nutzen, um Aufgaben auf der KODI-Backend-Instanz auszuführen und diese so aktiv zu halten.</description>
   </extension>
 </addon>
 

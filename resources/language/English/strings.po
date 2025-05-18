@@ -14,35 +14,19 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 
 msgctxt "#30000"
-msgid "General"
+msgid "Wake on LAN"
 msgstr ""
 
 msgctxt "#30001"
 msgid "Preferred local interface"
 msgstr ""
 
-msgctxt "#30002"
-msgid "Monitored host/PVR backend ip address"
-msgstr ""
-
-msgctxt "#30003"
-msgid "Monitored host/PVR backend port"
-msgstr ""
-
 msgctxt "#30004"
-msgid "WoL: Remote host/PVR backend mac address (optional)"
+msgid "Remote host mac address (optional)"
 msgstr ""
 
 msgctxt "#30005"
-msgid "WoL: Wakeup time in seconds"
-msgstr ""
-
-msgctxt "#30006"
-msgid "Keepalive interval in minutes (optional)"
-msgstr ""
-
-msgctxt "#30007"
-msgid "PVR Client Addon ID"
+msgid "Wakeup time in seconds"
 msgstr ""
 
 msgctxt "#30010"
@@ -50,7 +34,7 @@ msgid "Kodi Keepalive"
 msgstr ""
 
 msgctxt "#30011"
-msgid "Use RPC call instead of WoL"
+msgid "Use RPC call to keep Kodi active"
 msgstr ""
 
 msgctxt "#30012"
@@ -71,6 +55,10 @@ msgstr ""
 
 msgctxt "#30016"
 msgid "Addon ID"
+msgstr ""
+
+msgctxt "#30017"
+msgid "Keepalive interval in minutes (optional)"
 msgstr ""
 
 msgctxt "#30100"

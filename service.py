@@ -14,66 +14,141 @@ import xbmc
 import xbmcaddon
 
 
-__addon__      = xbmcaddon.Addon()
-__setting__    = __addon__.getSetting
-__addon_id__   = __addon__.getAddonInfo('id')
-__addon_name__ = __addon__.getAddonInfo('name')
-__localize__   = __addon__.getLocalizedString
-__profile__    = __addon__.getAddonInfo('profile')
+# Addon ID to be used in logging
+__addon_id__       = xbmcaddon.Addon().getAddonInfo('id')
+
+# Notification shown while PVR host is waking up
+__wake_text__      = xbmcaddon.Addon().getLocalizedString(30100)
+
+# Flag if system is shutting down
+# It will be set to 'True' when 'System.OnQuit' notification is processed
+__sys_shutdown__   = False
+
+# Flag if KODI's Wake on Access is set
+# If set and host MAC configured in PVR addon setting it'll make internal wakeHost() redundant
+__wake_on_access__ = False
+
+# VDR VNSI Client addon ID
+__pvr_addon_id__   = 'pvr.vdr.vnsi'
+__pvr_addon_name__ = 'VDR VNSI Client'
 
 
-#system_idle = False
+def readValue(item, default, addonid=None):
+    if addonid:
+       addon = xbmcaddon.Addon(addonid)
 
+    else:
+       addon = xbmcaddon.Addon()
 
-def read_value(item, default):
     try:
-        value = int(__setting__(item))
+        value = int(addon.getSetting(item))
+
     except ValueError:
         try:
-            if __setting__(item).lower() == 'true' or __setting__(item).lower() == 'false':
-                value = bool(__setting__(item).lower() == 'true')
+            if addon.getSetting(item).lower() == 'true' or addon.getSetting(item).lower() == 'false':
+                value = bool(addon.getSetting(item).lower() == 'true')
+
             else:
-                value = __setting__(item)
+                value = addon.getSetting(item)
+
         except ValueError:
             value = default
 
     return value
 
 
-def load_settings():
+def loadSettings():
     global host_mac, host_ip, host_port
-    global wait_time, wol_interval, wake_text
-    global pvr_addon_id, pvr_addon_name
-    global rpc_user, rpc_password, rpc_port, rpc_method, rpc_params, rpc_keepalive
+    global wait_time, wol_interval
+    global rpc_user, rpc_password, rpc_port, rpc_method, rpc_params, kodi_rpc
     global broadcast_ip
+    global __pvr_addon_name__
+    global __wake_on_access__
 
-    wake_text      = __localize__(30100)
+    if_name      = readValue('interface', 'eth0')
+    wait_time    = readValue('wait', 30)         # Seconds
+    wol_interval = readValue('interval', 0) * 60 # Minutes -> Seconds
 
-    if_name        = read_value('interface', 'eth0')
-    host_mac       = read_value('macaddress', '')
-    host_ip        = read_value('ipaddress', '127.0.0.1')
-    host_port      = read_value('port', 34890)
-    wait_time      = read_value('wait', 30) * 1000
-    wol_interval   = read_value('interval', 0) * 60
-    pvr_addon_id   = read_value('addonid', 'pvr.vdr.vnsi')
-    pvr_addon_name = xbmcaddon.Addon(pvr_addon_id).getAddonInfo('name')
+    host_mac     = readValue('macaddress', '')
 
-    rpc_keepalive  = read_value('rpcwol', True)
-    rpc_user       = read_value('rpcuser', 'kodi')
-    rpc_password   = read_value('rpcpwd', '')
-    rpc_port       = read_value('rpcport', 8080)
-    # as long as InhibitIdleShutdown(true) is not supported
-    rpc_method     = read_value('rpcmethod', 'VideoLibrary.Scan')
-    rpc_addon_id   = read_value('rpcaddonid', 'script.vdr.helper')
+    # KODI built-in Wake on Access will also wake up remote host.
+    # However, this requires the host's MAC address configured in PVR addon settings
+    response = callKODI('Settings.GetSettingValue', params={'setting': 'powermanagement.wakeonaccess'})
+    if response and 'value' in response:
+        __wake_on_access__ = response['value']
+        xbmc.log(f"[{__addon_id__}] KODI Wake on Acesss: {__wake_on_access__}.", level=xbmc.LOGDEBUG)
+
+    try:
+        # Query current status of PVR addon
+        response = callKODI('Addons.GetAddonDetails', params={'addonid': __pvr_addon_id__, 'properties': ['enabled']})
+
+        if response and 'addon' in response:
+            if not response['addon']['enabled']:
+                # Enable PVR addon if disabled
+                response = callKODI('Addons.SetAddonEnabled', params={'addonid': __pvr_addon_id__, 'enabled': True})
+                xbmc.sleep(5000)
+
+        __pvr_addon_name__ = xbmcaddon.Addon(__pvr_addon_id__).getAddonInfo('name')
+
+        host_ip   = readValue('host', '127.0.0.1', addonid=__pvr_addon_id__)
+        host_port = readValue('port', 34890, addonid=__pvr_addon_id__)
+
+        #host_mac  = readValue('wol_mac', host_mac, addonid=__pvr_addon_id__)
+        wol_mac   = readValue('wol_mac', '', addonid=__pvr_addon_id__)
+        xbmc.log(f"[{__addon_id__}] wol_mac: {wol_mac}.", level=xbmc.LOGDEBUG)
+        host_mac  = wol_mac or host_mac
+
+        xbmc.log(f"[{__addon_id__}] {__pvr_addon_name__} addon settings: hostanme/IP: {host_ip}, MAC: {host_mac}, Port: {host_port}.", level=xbmc.LOGDEBUG)
+
+        __wake_on_access__ = __wake_on_access__ and bool(wol_mac)
+        xbmc.log(f"[{__addon_id__}] __wake_on_access__: {__wake_on_access__}.", level=xbmc.LOGDEBUG)
+
+        xbmc.log(f"[{__addon_id__}] {__pvr_addon_name__} addon enabled.", level=xbmc.LOGINFO)
+
+    except:
+        xbmc.log(f"[{__addon_id__}] Failed to enable {__pvr_addon_name__} addon --> Abort.", level=xbmc.LOGINFO)
+        sys.exit(1)
+
+    # Query current screensaver mode and set to enable if not set
+    try:
+        response = callKODI('Settings.GetSettingValue', params={'setting': 'screensaver.mode'})
+        screensaver = response['value']
+        xbmc.log(f"[{__addon_id__}] Screensaver {'enabled' if bool(screensaver) else 'disabled --> enabling ...'}.", level=xbmc.LOGINFO)
+
+        if not screensaver:
+            response = callKODI('Settings.SetSettingValue', params={'setting': 'screensaver.mode', 'value': 'screensaver.xbmc.builtin.dim'})
+            xbmc.log(f"[{__addon_id__}] Screensaver enabled with default value (Dim). Response: {response}", level=xbmc.LOGINFO)
+
+    except:
+        xbmc.log(f"[{__addon_id__}] Unable to determine/adapt current screensaver mode --> Abort.", level=xbmc.LOGINFO)
+        sys.exit(1)
+
+    kodi_rpc = readValue('rpcwol', True)
+    if host_ip in ['localhost', '127.0.0.1']:
+        kodi_rpc = False
+
+    # In case a kodi instance is running on the same host as the PVR server,
+    # we must keep kodi busy to prevent system shutdown when kodi is idle
+
+    # We need rpc_user, rpc_passsowrd and rpc_port of the remote kodi instance
+    rpc_user       = readValue('rpcuser', 'kodi')
+    rpc_password   = readValue('rpcpwd', '')
+    rpc_port       = readValue('rpcport', 8080)
+
+    # As long as InhibitIdleShutdown(true) is not supported by kodi's JSON RPC,
+    # we can either start a library scan or call a helper script on the remote kodi instance
+    rpc_method     = readValue('rpcmethod', 'VideoLibrary.Scan')
+    rpc_addon_id   = readValue('rpcaddonid', 'script.vdr.helper')
+
     if rpc_method == 'VideoLibrary.Scan':
         rpc_params = None
+
     elif rpc_method == 'Addons.ExecuteAddon':
         rpc_params = {'addonid': rpc_addon_id}
 
     # Get broadcast ip dynamically
     try:
-        #local_ip = socket.gethostbyname(socket.gethostname())
-        local_ip = get_ip_address(if_name)
+        local_ip = getIPaddress(if_name)
         xbmc.log(f"[{__addon_id__}] Local IP address of interface {if_name}: {local_ip}.", level=xbmc.LOGINFO)
         local_ip = local_ip.rsplit('.', 1)
         local_ip[1] = '255'
@@ -84,17 +159,17 @@ def load_settings():
         sys.exit(1)
 
 
-def isOpen(ip, port, timeout=3):
-    if ip == '127.0.0.1':
-       return False
+def isOpen(host_ip, port, timeout=3):
+    if host_ip in ['localhost', '127.0.0.1']:
+        return True
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)
 
     try:
-        sock.connect((ip, int(port)))
+        sock.connect((host_ip, int(port)))
         # or
-        #if sock.connect_ex((ip, int(port))) == 0: # True if open, False if not
+        #if sock.connect_ex((host_ip, int(port))) == 0: # True if open, False if not
         sock.shutdown(socket.SHUT_RDWR)
         return True
 
@@ -126,7 +201,7 @@ def isUp(ifname):
         sock.close()
 
 
-def get_ip_address(ifname='eth0'):
+def getIPaddress(ifname='eth0'):
     if not isUp(ifname):
         raise RuntimeError(f"Interface {ifname} is down")
 
@@ -156,7 +231,7 @@ def isPlaybackPaused():
     return bool(xbmc.getCondVisibility("Player.Paused"))
 
 
-def wake_on_lan(mac_address):
+def wakeOnLAN(mac_address):
     pattern = '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})|([0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4})|([0-9A-Fa-f]{12})$'
 
     # Check mac address format
@@ -192,40 +267,39 @@ def wake_on_lan(mac_address):
     sock.sendto(send_data, (broadcast_ip, 7))
 
 
-def wake_host(wait=False, unconditionally=False):
-    if not unconditionally and isOpen(host_ip, host_port, 1):
-        xbmc.log(f"[{__addon_id__}] Host {host_ip} is up. Skip sending WoL request.", level=xbmc.LOGINFO)
+def wakeHost(wait=False):
+    if isOpen(host_ip, host_port, 1):
+        xbmc.log(f"[{__addon_id__}] Host {host_ip} is up. Not sending WoL request.", level=xbmc.LOGINFO)
         return True
-    else:
-        if not host_mac:
-            xbmc.log(f"[{__addon_id__}] No MAC addresss specified. Skip sending WoL request.", level=xbmc.LOGINFO)
-            return False
 
-        xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} of host {host_ip}.", level=xbmc.LOGINFO)
+    try:
+        if not __wake_on_access__:
+            if not host_mac:
+                xbmc.log(f"[{__addon_id__}] No MAC addresss specified. Unable to send WoL request.", level=xbmc.LOGINFO)
+                return False
 
-        try:
-            wake_on_lan(host_mac)
-            xbmc.executebuiltin(f"Notification({__addon_id__}, {wake_text}, {wait_time})")
-            if wait:
-                #xbmc.sleep(wait_time)
+            xbmc.log(f"[{__addon_id__}] Sending WoL request to MAC address {host_mac} of host {host_ip}.", level=xbmc.LOGINFO)
 
-                start_time = time.time()
-                while time.time() - start_time < wait_time:
-                    is_up = isOpen(host_ip, host_port, 1)
-                    if is_up:
-                        break
-                    else:
-                        time.sleep(5)
+            wakeOnLAN(host_mac)
+            xbmc.executebuiltin(f"Notification({__addon_id__}, {__wake_text__}, {wait_time*1000})")
 
-                return is_up
+        if wait:
+            start_time = time.time()
+            while time.time() - start_time < wait_time:
+                if isOpen(host_ip, host_port, 1):
+                    return True
+                else:
+                    time.sleep(5)
 
-        except Exception as e:
-            xbmc.log(f"[{__addon_id__}] Exception occured: {str(e)}.", level=xbmc.LOGINFO)
+            return False # Remove?
 
-        return isOpen(host_ip, host_port, 1)
+    except Exception as e:
+        xbmc.log(f"[{__addon_id__}] Exception occured: {str(e)}.", level=xbmc.LOGINFO)
+
+    return isOpen(host_ip, host_port, 1)
 
 
-def rpc_request(method, params=None, host='localhost', port=8080, username=None, password=None):
+def callKODI(method, params=None, host='localhost', port=8080, username=None, password=None):
     url = f"http://{host}:{port}/jsonrpc"
     headers = {'Content-Type': 'application/json'}
 
@@ -259,9 +333,9 @@ def rpc_request(method, params=None, host='localhost', port=8080, username=None,
 
             data = json.loads(response.text)
 
-        if data['id'] == method and 'result' in data:
-            xbmc.log(f"[{__addon_id__}] RPC request returned data: {data['result']}.", level=xbmc.LOGDEBUG)
-            return data['result']
+        if data and data.get('id') == method:
+            xbmc.log(f"[{__addon_id__}] RPC request returned data: {data.get('result')}.", level=xbmc.LOGDEBUG)
+            return data.get('result')
 
     except Exception as e:
         xbmc.log(f"[{__addon_id__}] RPC request failed with error: {str(e)}.", level=xbmc.LOGINFO)
@@ -269,84 +343,85 @@ def rpc_request(method, params=None, host='localhost', port=8080, username=None,
     return None
 
 
-def parse_notification(sender, method, data):
-    if sender == 'xbmc' and method == 'GUI.OnScreensaverActivated':
-        #system_idle = True
-        xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
+def parseNotification(sender, method, data):
+    global __sys_shutdown__
+
+    if sender != 'xbmc':
+        return
+
+    # Capture 'System.OnQuit' notifcation as 'shuttingdown' property of 'GUI.OnScreensaverDeactivated' is not set to 'True' on shutdown
+    if method == 'System.OnQuit':
+        xbmc.log(f"[{__addon_id__}] 'System.OnQuit' notification received. Flagging system is shutting down.", level=xbmc.LOGDEBUG)
+        __sys_shutdown__ = True
+        return
+
+    elif method not in ['GUI.OnScreensaverActivated', 'GUI.OnScreensaverDeactivated']:
+       return
+
+    action = method[17:].lower() # 'activated' or 'deactivated'
+    xbmc.log(f"[{__addon_id__}] Screensaver {action}.", level=xbmc.LOGINFO)
+
+    if action == 'activated':
+        # Return if Playback is currently paused
         if isPlaybackPaused():
-            xbmc.log(f"[{__addon_id__}] Playback paused. {pvr_addon_name} addon not disabled.", level=xbmc.LOGINFO)
-        else:
-            response = rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': False})
-            #xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon temporarily disabled. Response: {response}", level=xbmc.LOGINFO)
+            xbmc.log(f"[{__addon_id__}] Playback paused. {__pvr_addon_name__} addon not disabled.", level=xbmc.LOGINFO)
+            return
 
-            xbmc.sleep(15000)
-            response = rpc_request('Addons.GetAddonDetails', params={'addonid': pvr_addon_id, 'properties': ['enabled']})
-            if response and 'addon' in response:
-                xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled: {response['addon']['enabled']}", level=xbmc.LOGINFO)
-
-                # Switch to home
-                response = rpc_request('GUI.ActivateWindow', params={'window': 'home'})
-            else:
-                xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon diablement failed", level=xbmc.LOGINFO)
-
-    if sender == 'xbmc' and  method == 'GUI.OnScreensaverDeactivated':
+    elif action == 'deactivated':
+        # Return if system is shutting down
         signal = json.loads(data)
-        if signal and 'shuttingdown' in signal:
-            if not signal['shuttingdown']:
-                #system_idle = False
-                xbmc.log(f"[{__addon_id__}] Screen saver deactivated.", level=xbmc.LOGINFO)
+        if __sys_shutdown__ or (signal and signal.get('shuttingdown')):
+            xbmc.log(f"[{__addon_id__}] System is shutting down. Not sending WoL request.", level=xbmc.LOGINFO)
+            return
 
-                if not wake_host(wait=True):
-                    xbmc.log(f"[{__addon_id__}] Failes to wake up host with ip address {host_ip}", level=xbmc.LOGINFO)
-                    return
+        # Return if remote host is not awake
+        if not wakeHost(wait=True):
+            xbmc.log(f"[{__addon_id__}] Failed to wake up remote host with ip address {host_ip}.", level=xbmc.LOGINFO)
+            return
 
-                response = rpc_request('Addons.SetAddonEnabled', params={'addonid': pvr_addon_id, 'enabled': True})
-                #xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled. Response: {response}", level=xbmc.LOGINFO)
+    # Enable/Disable PVR addon
+    response = callKODI('Addons.SetAddonEnabled', params={'addonid': __pvr_addon_id__, 'enabled': action == 'deactivated'})
 
-                xbmc.sleep(15000)
-                response = rpc_request('Addons.GetAddonDetails', params={'addonid': pvr_addon_id, 'properties': ['enabled']})
-                if response and 'addon' in response:
-                    xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enabled: {response['addon']['enabled']}", level=xbmc.LOGINFO)
+    xbmc.sleep(15000)
 
-                    # Switch to home
-                    xbmc.sleep(5000)
-                    response = rpc_request('GUI.ActivateWindow', params={'window': 'home'})
-                else:
-                    xbmc.log(f"[{__addon_id__}] {pvr_addon_name} addon enablement failed", level=xbmc.LOGINFO)
+    # Query current status of PVR addon
+    response = callKODI('Addons.GetAddonDetails', params={'addonid': __pvr_addon_id__, 'properties': ['enabled']})
+
+    if response and 'addon' in response:
+        xbmc.log(f"[{__addon_id__}] {__pvr_addon_name__} addon {'enabled' if response['addon']['enabled'] else 'disabled'}.", level=xbmc.LOGINFO)
+
+        # Refresh home window
+        #if action == 'deactivated': xbmc.sleep(5000)
+        response = callKODI('GUI.ActivateWindow', params={'window': 'home'})
+
+    else:
+        xbmc.log(f"[{__addon_id__}] Failed to {'enable' if action == 'deactivated' else 'disable'} {__pvr_addon_name__} addon.", level=xbmc.LOGINFO)
 
 
 class MyMonitor(xbmc.Monitor):
     def onSettingsChanged(self):
         xbmc.log(f"[{__addon_id__}] Settings changed.", xbmc.LOGDEBUG)
-        load_settings()
+        loadSettings()
 
     #def onScreensaverActivated(self):
-    #    xbmc.log(f"[{__addon_id__}] Screen saver activated.", level=xbmc.LOGINFO)
+    #    xbmc.log(f"[{__addon_id__}] Screensaver activated.", level=xbmc.LOGINFO)
 
     #def onScreensaverDeactivated(self):
-    #    xbmc.log(f"[{__addon_id__}] Screen saver deactivated.", level=xbmc.LOGINFO)
+    #    xbmc.log(f"[{__addon_id__}] Screensaver deactivated.", level=xbmc.LOGINFO)
 
     def onNotification(self, sender, method, data):
         xbmc.log(f"[{__addon_id__}] OnNotification triggered (sender: {sender}, method: {method}, data: {data}).", level=xbmc.LOGDEBUG)
-        parse_notification(sender, method, data)
+        parseNotification(sender, method, data)
 
 
 if __name__ == "__main__":
     xbmc.log(f"[{__addon_id__}] Service started.", level=xbmc.LOGINFO)
 
-    load_settings()
+    loadSettings()
     xbmc.log(f"[{__addon_id__}] Settings loaded.", level=xbmc.LOGINFO)
 
-    try:
-        screensaver = bool(rpc_request('Settings.GetSettingValue', {'setting': 'screensaver.mode'})['value'])
-        xbmc.log(f"[{__addon_id__}] Sreensaver is {'enabled' if screensaver else 'disabled --> enabling ...'}.", level=xbmc.LOGINFO)
-        if not screensaver:
-            response = rpc_request('Settings.SetSettingValue', params={'setting': 'screensaver.mode', 'value': 'screensaver.xbmc.builtin.dim'})
-            xbmc.log(f"[{__addon_id__}] Screensaver enabled with default value (Dim). Response: {response}", level=xbmc.LOGINFO)
-    except:
-        xbmc.log(f"[{__addon_id__}] Unable to determine/adapt current screensaver mode.", level=xbmc.LOGINFO)
-
-    wake_host()
+    # Wake uo remote host
+    wakeHost()
 
     monitor = MyMonitor()
 
@@ -355,11 +430,13 @@ if __name__ == "__main__":
             xbmc.log(f"[{__addon_id__}] Abort requested.", level=xbmc.LOGINFO)
             break
         if wol_interval > 0:
-            if not xbmc.getCondVisibility("System.ScreenSaverActive"): #if not system_idle
-                if rpc_keepalive and isOpen(host_ip, rpc_port, 1):
-                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method}, parameters {rpc_params} to host {host_ip}.", level=xbmc.LOGDEBUG)
-                    response = rpc_request(rpc_method, params=rpc_params, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
+            # Continue only if screensaver is not active and ...
+            if not xbmc.getCondVisibility("System.ScreenSaverActive"):
+                # ... if kodi_rpc is set to True and remote host is up
+                if kodi_rpc and isOpen(host_ip, rpc_port, 1):
+                    # This is required when kodi and VDR are running on the same host,
+                    # to prevent kodi from shutting down the host while VDR is still serving clients
+                    xbmc.log(f"[{__addon_id__}] Sending RPC request with method {rpc_method}, parameters {rpc_params} to host {host_ip}.", level=xbmc.LOGINFO)
+                    response = callKODI(rpc_method, params=rpc_params, host=host_ip, port=rpc_port, username=rpc_user, password=rpc_password)
                     xbmc.log(f"[{__addon_id__}] RPC request response: {response}.", level=xbmc.LOGDEBUG)
-                #else:
-                #    wake_host(unconditionally=True)
 
